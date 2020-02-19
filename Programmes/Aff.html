@@ -1,0 +1,328 @@
+<html>
+	<head>
+		<title>Transept de la cathédrale d'Amiens</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	</head>
+
+	<body>
+		<script src="../Libs/three.min.js"></script>
+		<script src="../Libs/OBJLoader.js"></script>
+		<script src="../Libs/PointerLockControls.js"></script>
+
+		<div>
+			<STRONG>ZQSD ou Haut, Bas, Droite, Gauche pour bouger | Maintenez shift pour tourner | Maintenez alt pour voler</STRONG>
+		</div>
+
+		<script>
+			var container; 
+
+			var controls;
+			var controlsEnabled = false;
+            
+			var camera, scene, renderer;
+            var dax=0.002;
+
+            //lumiere
+            var light;
+
+            // Flags qui determine la direction du joueur
+			var moveForward = false;
+			var rotateUp = false;
+			var moveBackward = false;
+			var rotateDown = false;
+			var moveLeft = false;
+			var rotateLeft = false;
+			var moveRight = false;
+			var rotateRight = false;
+			var flyup = false;
+			var flydown = false;
+
+			// Vecteur de Vitesse du joueur
+			var playerVelocity = new THREE.Vector3();
+
+			// Vitesse du Joueur
+			var PLAYERSPEED = 20.0;
+
+			var clock;
+
+			function onWindowResize() {
+              camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function Init() {
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				clock = new THREE.Clock();
+				listenForPlayerMovement();
+
+				camera = new THREE.PerspectiveCamera( 90, window.innerWidth / window.innerHeight, 1, 2000 );
+                camera.rotation.z=0;
+                camera.rotation.x=7.8;
+                camera.rotation.y=0;
+                camera.position.z=-20;
+                camera.position.y=-20;
+                //x = 4 et -4
+                //y = 0 et -20
+
+				// scene
+				scene = new THREE.Scene();
+
+				var ambient = new THREE.AmbientLight( 0x333030 );
+				scene.add( ambient );
+
+				// texture
+
+				var manager = new THREE.LoadingManager();
+				manager.onProgress = function ( item, loaded, total ) {
+					console.log( item, loaded, total );
+				};
+
+				var texture = new THREE.Texture();
+
+				var loader = new THREE.ImageLoader( manager );
+				loader.load( '../TranseptSud/TranseptTexture4096.jpg', function ( image ) {
+					texture.image = image;
+					texture.needsUpdate = true;
+				} );
+
+				// Chargement du modèle
+				var loader = new THREE.OBJLoader( manager );
+				loader.load( '../TranseptSud/transeptSudBox.obj', function ( object ) {
+					object.traverse( function ( child ) {
+						if ( child instanceof THREE.Mesh ) {
+							child.material.map = texture;
+						}
+					} );
+					scene.add( object );
+				} );
+
+				controls = new THREE.PointerLockControls(camera);
+				scene.add(controls.getObject());
+
+				//ajout de la torche
+				light = new THREE.PointLight( 0xffffff, 5, 15 , 5);
+				light.position.set( 0, -20, -20 );
+				scene.add( light );
+
+              renderer = new THREE.WebGLRenderer();
+              renderer.setSize( window.innerWidth, window.innerHeight );
+              container.appendChild( renderer.domElement );
+              window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function Afficher() {
+                renderer.render(scene,camera);
+			}
+			function Animer() {
+				requestAnimationFrame(Animer);
+				var delta = clock.getDelta();
+				animePlayer(delta);
+				Afficher();
+				
+			}
+
+
+
+			function listenForPlayerMovement() {
+
+
+			    var onKeyDown = function(event) {
+
+			    switch (event.keyCode) {
+
+			      case 38: // up
+			      case 87: // w
+			        if(event.shiftKey) {
+			        	rotateUp = true;
+			        } else {
+			        	if (event.altKey) {
+			        		flyup = true;
+			        	}else{moveForward = true;}
+			        	
+			        }
+			        break;
+
+			      case 37: // left
+			      case 65: // a
+			        if(event.shiftKey) {
+			        	rotateLeft = true;
+			        } else {
+			        	moveLeft = true;
+			        }
+			        break;
+
+			      case 40: // down
+			      case 83: // s
+			        if(event.shiftKey) {
+			        	rotateDown = true;
+			        } else {
+			        	if (event.altKey) {
+			        		flydown = true;
+			        	}else{moveBackward = true;}
+			        }
+			        break;
+
+			      case 39: // right
+			      case 68: // d
+			        if(event.shiftKey) {
+			        	rotateRight = true;
+			        } else {
+			        	moveRight = true;
+			        }
+			        break;
+			    }
+			  };
+
+
+
+			    var onKeyUp = function(event) {
+
+			    switch (event.keyCode) {
+
+			      case 38: // up
+			      case 87: // w
+			        if(event.shiftKey) {
+			        	rotateUp = false;
+			        } else {
+			        	if (event.altKey) {
+			        		flyup = false;
+			        	}else{moveForward = false;}
+			        }
+			        break;
+
+			      case 37: // left
+			      case 65: // a
+			        if(event.shiftKey) {
+			        	rotateLeft = false;
+			        } else {
+			        	moveLeft = false;
+			        }
+			        break;
+
+			      case 40: // down
+			      case 83: // s
+			        if(event.shiftKey) {
+			        	rotateDown = false;
+			        } else {
+			        	if (event.altKey) {
+			        		flydown = false;
+			        	}else{moveBackward = false;}
+			        }
+			        break;
+
+			      case 39: // right
+			      case 68: // d
+			        if(event.shiftKey) {
+			        	rotateRight = false;
+			        } else {
+			        	moveRight = false;
+			        }
+			        break;
+			    }
+			  };
+
+
+			  document.addEventListener('keydown', onKeyDown, false);
+			  document.addEventListener('keyup', onKeyUp, false);
+			}
+
+
+			function animePlayer(delta) {
+
+				if (camera.position.y >= 0) {camera.position.y = -0.1;}
+				if (camera.position.y <= -20){camera.position.y = -19.9;}
+				if (camera.position.x >= 4) {camera.position.x = 3.9;}
+				if (camera.position.x <= -4){camera.position.x = -3.9;}
+				if (camera.position.z <= -20){camera.position.z = -19.9}
+
+
+
+				if (!(camera.position.z < -20)) {
+				  	if (camera.position.y < 0  && camera.position.y > -20)  
+				  	{
+					  	if (moveForward) {
+					    	//camera.position.y += PLAYERSPEED * delta;
+					    	camera.translateZ(-0.3);
+					  	} 
+					}
+				}
+
+				if (!(camera.position.z < -20)) {
+					if (camera.position.y < 0  && camera.position.y > -20) 
+					{  
+					  if (moveBackward) {
+					    //camera.position.y -= PLAYERSPEED * delta;
+					    camera.translateZ(0.3);
+					  } 
+					}
+				}
+
+				if (camera.position.x < 4 && camera.position.x > -4)
+				{  
+				  if (moveLeft) {
+				    //camera.position.x -= PLAYERSPEED * delta;
+				    camera.translateX(-0.3)
+				  } 
+				}else {
+						
+				}
+
+				if (camera.position.x > -4 && camera.position.x < 4)
+				{  
+				  if (moveRight) {
+				    //camera.position.x += PLAYERSPEED * delta;
+				    camera.translateX(0.3);
+				  }
+				}
+
+				if (!(camera.rotation.x > 8.7))
+				{
+				  if (rotateUp) {
+						camera.rotation.x += 0.1;
+				  }
+				}
+				if (!(camera.rotation.x < 6.7))
+				{
+				  if (rotateDown) {
+						camera.rotation.x -= 0.1;
+				  }
+				}
+				  if (rotateRight) {
+						camera.rotation.y -= 0.1;
+
+				  }
+				  if (rotateLeft) {
+						camera.rotation.y += 0.1;
+
+				  }
+				  if (!(camera.position.z > 20)) {
+				  	if(flyup) {
+				  		camera.position.z += PLAYERSPEED * delta;
+				  	}
+				  }
+				  
+
+				  if (!(camera.position.z < -20)) {
+				  	if(flydown) {
+				  		camera.position.z -= PLAYERSPEED * delta;
+				  	}
+				  }
+
+				  light.position.set( camera.position.x, camera.position.y, -20 );
+
+				  
+
+			}
+
+           Init();
+           Animer();
+           
+
+		</script>
+
+	</body>
+</html>
